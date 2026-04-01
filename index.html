@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Controle de Ração - Pro</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8b5cf6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+    :root { 
+        --bg-dark: #050505; 
+        --card-bg: #111114;
+        --accent: #8b5cf6; 
+        --accent-glow: rgba(139, 92, 246, 0.4);
+        --text-main: #ffffff;
+        --text-dim: #94a3b8;
+        --gradient: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+    }
+    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body { 
+        font-family: 'Inter', sans-serif; 
+        background: var(--bg-dark); 
+        color: var(--text-main);
+        margin: 0; 
+        padding-bottom: 110px;
+        background-image: radial-gradient(circle at 50% -10%, #1e1b4b, transparent 60%);
+    }
+    
+    header { 
+        padding: 25px 20px; 
+        text-align: center; 
+        background: rgba(5, 5, 5, 0.8);
+        backdrop-filter: blur(15px);
+        position: sticky; top: 0; z-index: 100;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    header h1 { 
+        margin: 0; font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em;
+        background: var(--gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-transform: uppercase;
+    }
+
+    .container { padding: 15px; max-width: 480px; margin: auto; }
+
+    .tab-content { display: none; animation: fadeIn 0.3s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .card { 
+        background: var(--card-bg); 
+        padding: 18px; 
+        border-radius: 20px; 
+        border: 1px solid rgba(255,255,255,0.03);
+        margin-bottom: 15px; 
+        text-align: center;
+    }
+
+    h2 { 
+        font-size: 0.8rem; margin: 0 0 15px 0; color: var(--text-dim); 
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    
+    label { display: block; margin-top: 10px; font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; font-weight: 600; }
+    
+    input, select { 
+        width: 100%; padding: 12px; margin-top: 5px; 
+        border: 1px solid #1f1f23; border-radius: 12px; 
+        font-size: 0.95rem; background: #000000; color: white;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    button { 
+        width: 100%; padding: 15px; margin-top: 12px; border: none; border-radius: 14px; 
+        font-weight: 700; font-size: 0.85rem; cursor: pointer;
+    }
+    .btn-buy, .btn-produce { background: var(--gradient); color: white; }
+    .btn-sync { background: #1e1b4b; color: #a78bfa; border: 1px solid #2e1065; margin-bottom: 15px; }
+    .btn-adj { background: #1f1f23; color: white; border: 1px solid #2d2d33; }
+    .btn-import { background: #065f46; color: white; margin-top: 10px; }
+    .btn-del { color: #f87171; background: none; border: none; font-size: 0.8rem; cursor: pointer; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: center; font-size: 0.55rem; color: var(--text-dim); text-transform: uppercase; padding-bottom: 8px; }
+    td { padding: 10px 0; border-bottom: 1px solid #1f1f23; font-size: 0.85rem; text-align: center; }
+    
+    .col-prod { font-weight: 600; color: var(--text-main); text-align: center !important; }
+    .col-kg { color: #a78bfa; font-weight: 700; text-align: center !important; }
+    .col-custo { color: var(--text-dim); font-size: 0.75rem; text-align: center !important; }
+    .col-valor-kg { color: #6366f1; font-weight: 600; font-size: 0.8rem; text-align: center !important; }
+
+    nav { 
+        position: fixed; bottom: 15px; left: 15px; right: 15px; 
+        background: rgba(20, 20, 20, 0.9); 
+        backdrop-filter: blur(20px);
+        display: flex; height: 65px; 
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 20px;
+    }
+    .nav-item { 
+        border: none; background: none; color: #4b5563; 
+        font-size: 0.6rem; display: flex; flex-direction: column; 
+        align-items: center; justify-content: center; flex: 1; 
+    }
+    .nav-item.active { color: var(--text-main); }
+    .nav-item i { font-size: 1.2rem; margin-bottom: 3px; }
+    .nav-item.active i { color: var(--accent); }
+
+    .prod-row { 
+        background: #000000; padding: 8px 12px; border-radius: 12px; 
+        margin-bottom: 6px; border: 1px solid #1f1f23;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<header><h1>Controle de Ração</h1></header>
+
+<div class="container">
+    
+    <div id="tab-inicio" class="tab-content active">
+        <button class="btn-sync" onclick="sincronizarDaNuvem()" id="btnSync">
+            <i class="fas fa-sync-alt"></i> SINCRONIZAR COM PLANILHA
+        </button>
+
+        <div class="card">
+            <h2><i class="fas fa-layer-group"></i> Monitor de Estoque</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qtd (kg)</th>
+                        <th>Custo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="listaEstoqueInicio"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-plus"></i> Entrada de Carga</h2>
+            <label>Material</label>
+            <select id="prodCompra"></select>
+            <input type="text" id="novoNome" placeholder="Adicionar novo item...">
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;"><label>Kilos</label><input type="number" id="kgCompra" placeholder="0.0"></div>
+                <div style="flex: 1;"><label>Valor Total</label><input type="number" id="valorCompra" placeholder="0.0"></div>
+            </div>
+            <button class="btn-buy" onclick="comprar()">Salvar Entrada</button>
+        </div>
+    </div>
+
+    <div id="tab-ajuste" class="tab-content">
+        <div class="card">
+            <h2><i class="fas fa-eye"></i> Visualização em Tempo Real</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>No Sistema (kg)</th>
+                    </tr>
+                </thead>
+                <tbody id="listaEstoqueAjusteVis"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-tools"></i> Corrigir Quantidade</h2>
+            <label>Selecione o Item</label>
+            <select id="prodAjuste"></select>
+            <label>Nova Quantidade Real (kg)</label>
+            <input type="number" id="kgAjuste" placeholder="Digite o peso correto">
+            <button class="btn-adj" onclick="ajustarEstoque()">Aplicar Correção</button>
+        </div>
+    </div>
+
+    <div id="tab-producao" class="tab-content">
+        <div class="card">
+            <h2><i class="fas fa-blender"></i> Composição da Batida</h2>
+            <div id="formProducao"></div>
+            <button class="btn-produce" onclick="produzir()">Finalizar Mistura</button>
+        </div>
+    </div>
+
+    <div id="tab-relatorios" class="tab-content">
+        <div class="card">
+            <h2><i class="fas fa-history"></i> Histórico de Batidas</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Data/Hora</th>
+                        <th style="width: 20%;">Peso (kg)</th>
+                        <th style="width: 25%;">Custo / Kg</th>
+                        <th style="width: 30%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="listaHistoricoBatidas"></tbody>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>Sincronização</h2>
+            <button class="btn-adj" onclick="exportarExcel()"><i class="fas fa-download"></i> Baixar Relatório (CSV)</button>
+            <button class="btn-import" onclick="document.getElementById('inputArq').click()"><i class="fas fa-upload"></i> Importar Backup</button>
+            <input type="file" id="inputArq" style="display:none" onchange="importarCSV(this)">
+            <button class="btn-del" style="margin-top: 15px; width: 100%;" onclick="limparHistorico()">Limpar Histórico Local</button>
+        </div>
+    </div>
+</div>
+
+<nav>
+    <button class="nav-item active" onclick="switchTab('tab-inicio', this)"><i class="fas fa-th-large"></i>Estoque</button>
+    <button class="nav-item" onclick="switchTab('tab-ajuste', this)"><i class="fas fa-edit"></i>Ajuste</button>
+    <button class="nav-item" onclick="switchTab('tab-producao', this)"><i class="fas fa-mortar-pestle"></i>Produzir</button>
+    <button class="nav-item" onclick="switchTab('tab-relatorios', this)"><i class="fas fa-chart-line"></i>Relat.</button>
+</nav>
+
+<script>
+// URL DA SUA NOVA PLANILHA DE RAÇÃO
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbwEnE3tCanfqHyX2KykXalU6--p-kLQxkppJA7_7X5kLKaORFvknZ9G7e9Zff4VvzdX/exec";
+
+// Nome da chave diferente para não dar conflito com o Granja Pro
+let dados = JSON.parse(localStorage.getItem('racaoDataV15')) || {
+    estoque: { milho: 0, soja: 0, nucleo: 0 },
+    custos: { milho: 0, soja: 0, nucleo: 0 },
+    historico: []
+};
+
+function salvar() { localStorage.setItem('racaoDataV15', JSON.stringify(dados)); }
+
+async function enviarParaNuvem(tipo, item, quantidade, valor) {
+    try {
+        fetch(GOOGLE_SHEET_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ tipo, item, quantidade, valor })
+        });
+    } catch (e) { console.error("Erro Nuvem:", e); }
+}
+
+async function sincronizarDaNuvem() {
+    const btn = document.getElementById('btnSync');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SINCRONIZANDO...';
+    try {
+        const response = await fetch(GOOGLE_SHEET_URL);
+        const registros = await response.json();
+        
+        dados.estoque = {};
+        dados.custos = {};
+        dados.historico = [];
+
+        registros.forEach(reg => {
+            let nomeItem = (reg.item || "").toString().toLowerCase().trim();
+            if (!nomeItem) return;
+
+            let tipo = reg.tipo || "";
+            let qtd = parseFloat(reg.quantidade || 0);
+            let valor = parseFloat(reg.valor || 0);
+
+            if (tipo === "COMPRA") {
+                if (!dados.estoque[nomeItem]) { dados.estoque[nomeItem] = 0; dados.custos[nomeItem] = 0; }
+                let custoAnterior = dados.estoque[nomeItem] * dados.custos[nomeItem];
+                dados.estoque[nomeItem] += qtd;
+                dados.custos[nomeItem] = (custoAnterior + valor) / dados.estoque[nomeItem];
+            } 
+            else if (tipo === "AJUSTE") {
+                dados.estoque[nomeItem] = qtd;
+            } 
+            else if (tipo === "BATIDA") {
+                dados.historico.unshift({ 
+                    data: reg.data, 
+                    pesoTotal: qtd, 
+                    custoTotal: valor 
+                });
+            }
+        });
+
+        atualizarInterface();
+        alert("Planilha sincronizada!");
+    } catch (e) {
+        alert("Erro ao sincronizar.");
+    } finally {
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> SINCRONIZAR COM PLANILHA';
+    }
+}
+
+function switchTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    atualizarInterface();
+}
+
+function atualizarInterface() {
+    const itens = Object.keys(dados.estoque).sort();
+    
+    document.getElementById('listaEstoqueInicio').innerHTML = itens.map(i => `
+        <tr>
+            <td class="col-prod">${i.toUpperCase()}</td>
+            <td class="col-kg">${dados.estoque[i].toFixed(1)}</td>
+            <td class="col-custo">R$ ${dados.custos[i].toFixed(2)}</td>
+            <td><button class="btn-del" onclick="removerItem('${i}')"><i class="fas fa-times"></i></button></td>
+        </tr>
+    `).join('');
+
+    document.getElementById('listaEstoqueAjusteVis').innerHTML = itens.map(i => `
+        <tr>
+            <td class="col-prod">${i.toUpperCase()}</td>
+            <td class="col-kg">${dados.estoque[i].toFixed(1)} kg</td>
+        </tr>
+    `).join('');
+
+    document.getElementById('listaHistoricoBatidas').innerHTML = dados.historico.length > 0 ? 
+        dados.historico.map(h => `
+        <tr>
+            <td style="font-size: 0.65rem; color: #94a3b8;">${new Date(h.data).toLocaleDateString()}</td>
+            <td class="col-kg">${h.pesoTotal.toFixed(1)}</td>
+            <td class="col-valor-kg">R$ ${(h.custoTotal / h.pesoTotal).toFixed(2)}</td>
+            <td class="col-custo">R$ ${h.custoTotal.toFixed(2)}</td>
+        </tr>
+    `).join('') : `<tr><td colspan="4" style="padding: 20px; color: #4b5563;">Nenhum registro</td></tr>`;
+
+    document.getElementById('prodCompra').innerHTML = itens.map(i => `<option value="${i}">${i.toUpperCase()}</option>`).join('');
+    document.getElementById('prodAjuste').innerHTML = itens.map(i => `<option value="${i}">${i.toUpperCase()}</option>`).join('');
+    
+    document.getElementById('formProducao').innerHTML = itens.map(i => `
+        <div class="prod-row">
+            <span style="font-weight:600; font-size:0.8rem;">${i.toUpperCase()}</span>
+            <input type="number" class="input-prod" data-item="${i}" placeholder="0" style="width:100px; margin:0; padding:8px;">
+        </div>
+    `).join('');
+    
+    salvar();
+}
+
+function comprar() {
+    let n = document.getElementById('novoNome').value.trim().toLowerCase();
+    let it = n !== "" ? n : document.getElementById('prodCompra').value;
+    let k = parseFloat(document.getElementById('kgCompra').value);
+    let v = parseFloat(document.getElementById('valorCompra').value);
+    if (!k || !v) return;
+    if (!dados.estoque[it]) { dados.estoque[it] = 0; dados.custos[it] = 0; }
+    let custoAnterior = dados.estoque[it] * dados.custos[it];
+    dados.estoque[it] += k;
+    dados.custos[it] = (custoAnterior + v) / dados.estoque[it];
+    enviarParaNuvem("COMPRA", it.toUpperCase(), k, v);
+    document.getElementById('novoNome').value = ""; document.getElementById('kgCompra').value = ""; document.getElementById('valorCompra').value = "";
+    atualizarInterface();
+}
+
+function ajustarEstoque() {
+    const it = document.getElementById('prodAjuste').value;
+    const n = parseFloat(document.getElementById('kgAjuste').value);
+    if (!isNaN(n)) { 
+        dados.estoque[it] = n; 
+        enviarParaNuvem("AJUSTE", it.toUpperCase(), n, 0);
+        document.getElementById('kgAjuste').value = "";
+        atualizarInterface(); 
+        alert("Ajustado!"); 
+    }
+}
+
+function produzir() {
+    const inputs = document.querySelectorAll('.input-prod');
+    let pB = 0; let cB = 0; let resumo = [];
+    for (let inp of inputs) {
+        let q = parseFloat(inp.value) || 0;
+        let it = inp.dataset.item;
+        if (q > 0) {
+            if (q > dados.estoque[it]) return alert("Estoque insuficiente de " + it);
+            pB += q; cB += q * dados.custos[it];
+            resumo.push(`${q}kg ${it}`);
+        }
+    }
+    if (pB === 0) return;
+    for (let inp of inputs) {
+        let q = parseFloat(inp.value) || 0;
+        let it = inp.dataset.item;
+        if (q > 0) dados.estoque[it] -= q;
+    }
+    enviarParaNuvem("BATIDA", resumo.join(" | "), pB, cB);
+    atualizarInterface(); alert("Batida enviada!");
+}
+
+function removerItem(it) { 
+    if (confirm("Excluir " + it + " da planilha?")) { 
+        delete dados.estoque[it]; 
+        delete dados.custos[it]; 
+        fetch(GOOGLE_SHEET_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({ tipo: "EXCLUIR", item: it.toUpperCase() })
+        });
+        atualizarInterface(); 
+    } 
+}
+
+function limparHistorico() { if (confirm("Apagar histórico local?")) { dados.historico = []; atualizarInterface(); } }
+
+function exportarExcel() {
+    let csv = "Item;Kilos;Custo\n";
+    Object.keys(dados.estoque).forEach(i => csv += `${i};${dados.estoque[i].toFixed(2)};${dados.custos[i].toFixed(2)}\n`);
+    csv += "\nHISTORICO DE BATIDAS\nData;Peso Total (kg);Custo por Kg (R$);Custo Total (R$)\n";
+    dados.historico.forEach(h => csv += `${h.data};${h.pesoTotal.toFixed(2)};${(h.custoTotal/h.pesoTotal).toFixed(2)};${h.custoTotal.toFixed(2)}\n`);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: 'text/csv' }));
+    link.download = `Relatorio_Granja.csv`; link.click();
+}
+
+function importarCSV(input) {
+    const reader = new FileReader();
+    reader.onload = function () {
+        const linhas = reader.result.split("\n");
+        let novo = { estoque: {}, custos: {}, historico: [] };
+        let modoHist = false;
+        linhas.forEach(l => {
+            if (l.includes("HISTORICO")) { modoHist = true; return; }
+            let c = l.split(";");
+            if (c.length < 3 || c[0].includes("Item") || c[0].includes("Data")) return;
+            if (!modoHist) {
+                novo.estoque[c[0].toLowerCase()] = parseFloat(c[1]);
+                novo.custos[c[0].toLowerCase()] = parseFloat(c[2]);
+            } else {
+                novo.historico.push({ data: c[0], pesoTotal: parseFloat(c[1]), custoTotal: parseFloat(c[3]) });
+            }
+        });
+        if(Object.keys(novo.estoque).length > 0) { dados = novo; salvar(); atualizarInterface(); alert("Backup Importado!"); }
+    };
+    reader.readAsText(input.files[0]);
+}
+
+atualizarInterface();
+</script>
+</body>
+</html>
